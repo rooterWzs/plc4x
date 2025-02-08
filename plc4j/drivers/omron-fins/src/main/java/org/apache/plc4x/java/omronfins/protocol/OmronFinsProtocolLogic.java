@@ -18,11 +18,13 @@
  */
 package org.apache.plc4x.java.omronfins.protocol;
 
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
 import org.apache.plc4x.java.api.model.PlcTag;
 import org.apache.plc4x.java.api.types.PlcResponseCode;
 import org.apache.plc4x.java.omronfins.configuration.OmronFinsConfiguration;
+import org.apache.plc4x.java.omronfins.context.OmronFinsDriverContext;
 import org.apache.plc4x.java.omronfins.readwrite.FinsHandshakeRequest;
 import org.apache.plc4x.java.omronfins.readwrite.FinsHandshakeResponse;
 import org.apache.plc4x.java.omronfins.readwrite.FinsMessage;
@@ -33,6 +35,8 @@ import org.apache.plc4x.java.spi.ConversationContext;
 import org.apache.plc4x.java.spi.Plc4xProtocolBase;
 import org.apache.plc4x.java.spi.configuration.HasConfiguration;
 import org.apache.plc4x.java.spi.connection.PlcTagHandler;
+import org.apache.plc4x.java.spi.context.DriverContext;
+import org.apache.plc4x.java.spi.events.ConnectEvent;
 import org.apache.plc4x.java.spi.transaction.RequestTransactionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class OmronFinsProtocolLogic extends Plc4xProtocolBase<FinsMessage> implements HasConfiguration<OmronFinsConfiguration> {
+public class OmronFinsProtocolLogic extends Plc4xProtocolBase<FinsMessage> {
 
     private static final Logger logger = LoggerFactory.getLogger(OmronFinsProtocolLogic.class);
     public static final Duration REQUEST_TIMEOUT = Duration.ofMillis(10000);
@@ -55,11 +59,14 @@ public class OmronFinsProtocolLogic extends Plc4xProtocolBase<FinsMessage> imple
 
     private RequestTransactionManager tm;
 
+    private OmronFinsDriverContext driverContext;
+
+    private AtomicInteger transactionId = new AtomicInteger(0);
+
     @Override
-    public void setConfiguration(OmronFinsConfiguration configuration) {
-        System.out.println("Connection setConfiguration:");
-        this.configuration = configuration;
-        // Set the transaction manager to allow only one message at a time.
+    public void setDriverContext(DriverContext driverContext) {
+        super.setDriverContext(driverContext);
+        this.driverContext = (OmronFinsDriverContext) driverContext;
         this.tm = new RequestTransactionManager(1);
     }
 
@@ -96,20 +103,22 @@ public class OmronFinsProtocolLogic extends Plc4xProtocolBase<FinsMessage> imple
         logger.debug("Sending Connection Request");
         FinsMessage connectionRequest = new FinsMessage(0x00000000, createFinsHandshakeRequest());
 
-        RequestTransactionManager.RequestTransaction transaction = tm.startRequest();
         context.sendRequest(connectionRequest)
             .onTimeout(e -> {
                 logger.warn("Timeout during Connection establishing, closing channel...");
-                context.getChannel().close();
+//                context.getChannel().close();
             })
             .expectResponse(FinsMessage.class, REQUEST_TIMEOUT)
             .unwrap(FinsMessage::getMessageBody)
             .only(FinsHandshakeResponse.class)
-            .check(p -> true)
             .handle(handshakeResponse -> {
-                System.out.println("FinsHandshakeResponse.getServerNode():");
+                System.out.println("FinsHandshakeResponse.getServerNode():"+ handshakeResponse.getSA1());
                 // sessionHandle = FinsHandshakeResponse.getSessionHandle();
                 // Send an event that connection setup is complete.
+                OmronFinsConfiguration configuration = new OmronFinsConfiguration();
+                configuration.setSa1(handshakeResponse.getSA1());
+                configuration.setDa1(handshakeResponse.getDA1());
+                driverContext.setConfiguration(configuration);
                 context.fireConnected();
             });
     }
@@ -121,7 +130,8 @@ public class OmronFinsProtocolLogic extends Plc4xProtocolBase<FinsMessage> imple
 
     @Override
     public CompletableFuture<PlcReadResponse> read(PlcReadRequest readRequest) {
-        System.out.println("Connection read:");
+        System.out.println("Connection read: SA1:" + driverContext.getSa1() + " | DA1:" + driverContext.getDa1());
+
         // TODO: Warning ... we are sending one request per tag ...
         //  the result has to be merged back together ...
         for (String tagName : readRequest.getTagNames()) {

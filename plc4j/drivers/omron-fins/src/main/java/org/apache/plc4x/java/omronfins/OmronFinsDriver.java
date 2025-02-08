@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBuf;
 import org.apache.plc4x.java.api.model.PlcTag;
 import org.apache.plc4x.java.omronfins.configuration.OmronFinsConfiguration;
 import org.apache.plc4x.java.omronfins.configuration.OmronFinsTcpTransportConfiguration;
+import org.apache.plc4x.java.omronfins.context.OmronFinsDriverContext;
 import org.apache.plc4x.java.omronfins.protocol.OmronFinsProtocolLogic;
 import org.apache.plc4x.java.omronfins.readwrite.FinsMessage;
 import org.apache.plc4x.java.omronfins.tag.OmronFinsTag;
@@ -99,9 +100,10 @@ public class OmronFinsDriver extends GeneratedDriverBase<FinsMessage> {
 
     @Override
     protected ProtocolStackConfigurer<FinsMessage> getStackConfigurer() {
-        return SingleProtocolStackConfigurer.builder(FinsMessage.class, (io) -> FinsMessage.staticParse(io, true))
+        return SingleProtocolStackConfigurer.builder(FinsMessage.class, (io) -> FinsMessage.staticParse(io, false))
             .withProtocol(OmronFinsProtocolLogic.class)
-            .withPacketSizeEstimator(ByteLengthEstimator.class)
+            .withDriverContext(OmronFinsDriverContext.class)
+//            .withPacketSizeEstimator(ByteLengthEstimator.class)
 //            .byteOrder(configuration.getByteOrder())
             .build();
     }

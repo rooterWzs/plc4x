@@ -41,4 +41,30 @@ public class OmronFinsConfiguration implements PlcConnectionConfiguration {
         this.bigEndian = byteOrder == ByteOrder.BIG_ENDIAN;
     }
 
+
+    @ConfigurationParameter("sa1")
+    @Description("Configure the SA1")
+    public short sa1;
+
+    public short getSa1() {
+        return sa1;
+    }
+
+    public void setSa1(short sa1) {
+        this.sa1 = sa1;
+    }
+
+    @ConfigurationParameter("da1")
+    @Description("Configure the DA1")
+    public short da1;
+
+    public short getDa1() {
+        return da1;
+    }
+
+    public void setDa1(short da1) {
+        this.da1 = da1;
+    }
+
+
 }
