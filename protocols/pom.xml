@@ -38,28 +38,29 @@
   </properties>
 
   <modules>
-    <module>ab-eth</module>
-    <module>ads</module>
-    <module>c-bus</module>
-    <module>bacnetip</module>
-    <module>canopen</module>
-    <module>df1</module>
-    <module>eip</module>
-    <module>firmata</module>
-    <module>genericcan</module>
-    <module>iec-60870</module>
-    <module>knxnetip</module>
-    <module>modbus</module>
-    <module>mqtt</module>
-    <module>opcua</module>
-    <module>open-protocol</module>
-    <module>plc4x</module>
-    <module>plc4x-api</module>
-    <module>profinet</module>
-    <module>s7</module>
-    <module>simulated</module>
-    <module>socketcan</module>
-    <module>umas</module>
+<!--    <module>ab-eth</module>-->
+<!--    <module>ads</module>-->
+<!--    <module>c-bus</module>-->
+<!--    <module>bacnetip</module>-->
+<!--    <module>canopen</module>-->
+<!--    <module>df1</module>-->
+<!--    <module>eip</module>-->
+<!--    <module>firmata</module>-->
+<!--    <module>genericcan</module>-->
+<!--    <module>iec-60870</module>-->
+<!--    <module>knxnetip</module>-->
+<!--    <module>modbus</module>-->
+<!--    <module>mqtt</module>-->
+<!--    <module>opcua</module>-->
+<!--    <module>open-protocol</module>-->
+<!--    <module>plc4x</module>-->
+<!--    <module>plc4x-api</module>-->
+<!--    <module>profinet</module>-->
+<!--    <module>s7</module>-->
+<!--    <module>simulated</module>-->
+<!--    <module>socketcan</module>-->
+<!--    <module>umas</module>-->
+    <module>omron-fins</module>
   </modules>
 
   <build>
