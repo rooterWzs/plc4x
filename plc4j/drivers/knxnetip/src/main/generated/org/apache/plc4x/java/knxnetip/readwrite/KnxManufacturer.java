@@ -63,7 +63,7 @@ public enum KnxManufacturer {
   M_ZUMTOBEL((int) 34, (int) 55, (String) "ZUMTOBEL"),
   M_HOLEC_SYSTEMEN((int) 35, (int) 56, (String) "HOLEC Systemen"),
   M_PHOENIX_CONTACT((int) 36, (int) 57, (String) "Phoenix Contact"),
-  M_WAGO_KONTAKTTECHNIK((int) 37, (int) 61, (String) "WAGO Kontakttechnik"),
+  M_WAGO_GMBH_AND_CO_KG((int) 37, (int) 61, (String) "WAGO GmbH & Co.KG"),
   M_KNXPRESSO((int) 38, (int) 62, (String) "knXpresso"),
   M_WIELAND_ELECTRIC((int) 39, (int) 66, (String) "Wieland Electric"),
   M_HERMANN_KLEINHUIS((int) 40, (int) 67, (String) "Hermann Kleinhuis"),
@@ -834,9 +834,19 @@ public enum KnxManufacturer {
   M_LAPP((int) 712, (int) 773, (String) "LAPP"),
   M_ZEROBIT_DYNAMIC((int) 713, (int) 774, (String) "ZEROBIT DYNAMIC"),
   M_HAVELLS((int) 714, (int) 775, (String) "havells"),
-  M_ABB___RESERVED((int) 715, (int) 43954, (String) "ABB - reserved"),
+  M_MULLER_INTUITIV((int) 715, (int) 776, (String) "Muller Intuitiv"),
+  M_TASKIT_GMBH((int) 716, (int) 777, (String) "taskit GmbH"),
+  M_COSTER_GROUP((int) 717, (int) 778, (String) "Coster Group"),
+  M_NXP_SEMICONDUCTOR((int) 718, (int) 779, (String) "NXP Semiconductor"),
+  M_COGCONS((int) 719, (int) 780, (String) "CogCons"),
+  M_MICRO_TEK_SRL_F_M_C_TRADE_MARK(
+      (int) 720, (int) 781, (String) "Micro Tek Srl (F.M.C trade mark)"),
+  M_ORENDA_ELECTRIC((int) 721, (int) 782, (String) "Orenda Electric"),
+  M_ERSE_KABLO((int) 722, (int) 783, (String) "ERSE KABLO"),
+  M_PRADO_EUROPE_BV((int) 723, (int) 784, (String) "prado europe bv"),
+  M_ABB___RESERVED((int) 724, (int) 43954, (String) "ABB - reserved"),
   M_BUSCH_JAEGER_ELEKTRO___RESERVED(
-      (int) 716, (int) 43959, (String) "Busch-Jaeger Elektro - reserved");
+      (int) 725, (int) 43959, (String) "Busch-Jaeger Elektro - reserved");
   private static final Map<Integer, KnxManufacturer> map;
 
   static {
