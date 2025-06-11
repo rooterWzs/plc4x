@@ -42,6 +42,7 @@ public class OmronFinsConfiguration implements PlcConnectionConfiguration {
     }
 
 
+
     @ConfigurationParameter("sa1")
     @Description("Configure the SA1")
     public short sa1;

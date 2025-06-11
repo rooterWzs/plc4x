@@ -51,6 +51,7 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
   protected final FinsSrcMrcCode srcMrcCode;
   protected final FinsRegisterAddress registerAddress;
   protected final int startAddress;
+  protected final short bitAddress;
   protected final int dataLength;
 
   public FinsReadRequest(
@@ -58,12 +59,14 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
       FinsSrcMrcCode srcMrcCode,
       FinsRegisterAddress registerAddress,
       int startAddress,
+      short bitAddress,
       int dataLength) {
     super();
     this.section = section;
     this.srcMrcCode = srcMrcCode;
     this.registerAddress = registerAddress;
     this.startAddress = startAddress;
+    this.bitAddress = bitAddress;
     this.dataLength = dataLength;
   }
 
@@ -81,6 +84,10 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
 
   public int getStartAddress() {
     return startAddress;
+  }
+
+  public short getBitAddress() {
+    return bitAddress;
   }
 
   public int getDataLength() {
@@ -103,7 +110,7 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
         "FinsSrcMrcCode",
         srcMrcCode,
         writeEnum(
-            FinsSrcMrcCode::getValue, FinsSrcMrcCode::name, writeUnsignedLong(writeBuffer, 32)));
+            FinsSrcMrcCode::getValue, FinsSrcMrcCode::name, writeUnsignedInt(writeBuffer, 16)));
 
     // Simple Field (registerAddress)
     writeSimpleEnumField(
@@ -113,10 +120,13 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
         writeEnum(
             FinsRegisterAddress::getValue,
             FinsRegisterAddress::name,
-            writeUnsignedLong(writeBuffer, 32)));
+            writeUnsignedShort(writeBuffer, 8)));
 
     // Simple Field (startAddress)
-    writeSimpleField("startAddress", startAddress, writeUnsignedInt(writeBuffer, 24));
+    writeSimpleField("startAddress", startAddress, writeUnsignedInt(writeBuffer, 16));
+
+    // Simple Field (bitAddress)
+    writeSimpleField("bitAddress", bitAddress, writeUnsignedShort(writeBuffer, 8));
 
     // Simple Field (dataLength)
     writeSimpleField("dataLength", dataLength, writeUnsignedInt(writeBuffer, 16));
@@ -139,13 +149,16 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
     lengthInBits += section.getLengthInBits();
 
     // Simple field (srcMrcCode)
-    lengthInBits += 32;
+    lengthInBits += 16;
 
     // Simple field (registerAddress)
-    lengthInBits += 32;
+    lengthInBits += 8;
 
     // Simple field (startAddress)
-    lengthInBits += 24;
+    lengthInBits += 16;
+
+    // Simple field (bitAddress)
+    lengthInBits += 8;
 
     // Simple field (dataLength)
     lengthInBits += 16;
@@ -167,22 +180,24 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
         readEnumField(
             "srcMrcCode",
             "FinsSrcMrcCode",
-            readEnum(FinsSrcMrcCode::enumForValue, readUnsignedLong(readBuffer, 32)));
+            readEnum(FinsSrcMrcCode::enumForValue, readUnsignedInt(readBuffer, 16)));
 
     FinsRegisterAddress registerAddress =
         readEnumField(
             "registerAddress",
             "FinsRegisterAddress",
-            readEnum(FinsRegisterAddress::enumForValue, readUnsignedLong(readBuffer, 32)));
+            readEnum(FinsRegisterAddress::enumForValue, readUnsignedShort(readBuffer, 8)));
 
-    int startAddress = readSimpleField("startAddress", readUnsignedInt(readBuffer, 24));
+    int startAddress = readSimpleField("startAddress", readUnsignedInt(readBuffer, 16));
+
+    short bitAddress = readSimpleField("bitAddress", readUnsignedShort(readBuffer, 8));
 
     int dataLength = readSimpleField("dataLength", readUnsignedInt(readBuffer, 16));
 
     readBuffer.closeContext("FinsReadRequest");
     // Create the instance
     return new FinsReadRequestBuilderImpl(
-        section, srcMrcCode, registerAddress, startAddress, dataLength);
+        section, srcMrcCode, registerAddress, startAddress, bitAddress, dataLength);
   }
 
   public static class FinsReadRequestBuilderImpl implements FinsMessageBody.FinsMessageBodyBuilder {
@@ -190,6 +205,7 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
     private final FinsSrcMrcCode srcMrcCode;
     private final FinsRegisterAddress registerAddress;
     private final int startAddress;
+    private final short bitAddress;
     private final int dataLength;
 
     public FinsReadRequestBuilderImpl(
@@ -197,17 +213,20 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
         FinsSrcMrcCode srcMrcCode,
         FinsRegisterAddress registerAddress,
         int startAddress,
+        short bitAddress,
         int dataLength) {
       this.section = section;
       this.srcMrcCode = srcMrcCode;
       this.registerAddress = registerAddress;
       this.startAddress = startAddress;
+      this.bitAddress = bitAddress;
       this.dataLength = dataLength;
     }
 
     public FinsReadRequest build() {
       FinsReadRequest finsReadRequest =
-          new FinsReadRequest(section, srcMrcCode, registerAddress, startAddress, dataLength);
+          new FinsReadRequest(
+              section, srcMrcCode, registerAddress, startAddress, bitAddress, dataLength);
       return finsReadRequest;
     }
   }
@@ -225,6 +244,7 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
         && (getSrcMrcCode() == that.getSrcMrcCode())
         && (getRegisterAddress() == that.getRegisterAddress())
         && (getStartAddress() == that.getStartAddress())
+        && (getBitAddress() == that.getBitAddress())
         && (getDataLength() == that.getDataLength())
         && super.equals(that)
         && true;
@@ -238,6 +258,7 @@ public class FinsReadRequest extends FinsMessageBody implements Message {
         getSrcMrcCode(),
         getRegisterAddress(),
         getStartAddress(),
+        getBitAddress(),
         getDataLength());
   }
 

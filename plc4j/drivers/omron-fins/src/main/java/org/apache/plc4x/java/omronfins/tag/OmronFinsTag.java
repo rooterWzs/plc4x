@@ -23,110 +23,183 @@ import org.apache.plc4x.java.api.exceptions.PlcInvalidTagException;
 import org.apache.plc4x.java.api.model.ArrayInfo;
 import org.apache.plc4x.java.api.model.PlcTag;
 import org.apache.plc4x.java.api.types.PlcValueType;
-import org.apache.plc4x.java.omronfins.types.FileType;
+import org.apache.plc4x.java.omronfins.readwrite.FinsRegisterAddress;
+import org.apache.plc4x.java.omronfins.readwrite.OmronFinsDataType;
+import org.apache.plc4x.java.spi.codegen.WithOption;
+import org.apache.plc4x.java.spi.generation.SerializationException;
+import org.apache.plc4x.java.spi.generation.WriteBuffer;
+import org.apache.plc4x.java.spi.model.DefaultArrayInfo;
+import org.apache.plc4x.java.spi.utils.Serializable;
 
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-public class OmronFinsTag implements PlcTag {
-
-    private static final Pattern ADDRESS_PATTERN =
-//        Pattern.compile("^N(?<fileNumber>\\d{1,7}):(?<elementNumber>\\d{1,7})/(?<bitNumber>\\d{1,7}):(?<dataType>[a-zA-Z_]+)(\\[(?<size>\\d+)])?");
-        Pattern.compile("^N(?<fileNumber>\\d{1,7}):(?<elementNumber>\\d{1,7})(/(?<bitNumber>\\d{1,7}))?:(?<dataType>[a-zA-Z_]+)(\\[(?<size>\\d+)])?");
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 
-    private static final String FILE_NUMBER = "fileNumber";
-    private static final String ELEMENT_NUMBER = "elementNumber";
-//    private static final String SUB_ELEMENT_NUMBER = "subElementNumber";
-    private static final String BIT_NUMBER = "bitNumber";
-    private static final String DATA_TYPE = "dataType";
-    private static final String SIZE = "size";
+public abstract class OmronFinsTag implements PlcTag, Serializable {
 
-    private final short byteSize;
-    private final short fileNumber;
-    private final FileType fileType;
-    private final short elementNumber;
-    private final short bitNumber;
 
-    public OmronFinsTag(short byteSize, short fileNumber, FileType fileType, short elementNumber, short bitNumber) {
-        this.byteSize = byteSize;
-        this.fileNumber = fileNumber;
-        this.fileType = fileType;
-        this.elementNumber = elementNumber;
-        this.bitNumber = bitNumber;
-    }
+    public static final int PROTOCOL_ADDRESS_OFFSET = 0;
 
-    public short getByteSize() {
-        return byteSize;
-    }
+    private final FinsRegisterAddress addrprefix;
 
-    public short getFileNumber() {
-        return fileNumber;
-    }
+    private final int addrword;
 
-    public FileType getFileType() {
-        return fileType;
+    private final byte addrbit;
+
+    private final int quantity;
+
+    private final OmronFinsDataType dataType;
+
+
+    public static OmronFinsTag of(String addressString) {
+        if (OmronFinsTagMatch.matches(addressString)) {
+            return OmronFinsTagMatch.of(addressString);
+        }
+        throw new PlcInvalidTagException("Unable to parse address: " + addressString);
     }
 
     @Override
     public String getAddressString() {
-        String address = String.format("N%d:%d", fileNumber, elementNumber);
-        if(bitNumber != 0) {
-            address += "/" + bitNumber;
+        String address = String.format("%s%05d", getAddressStringPrefix(), getLogicalAddress());
+        if(getDataType() != null) {
+            address += ":" + getDataType().name();
         }
-        address += ":" + fileType.name();
-        if(byteSize != 1) {
-            address += "[" + byteSize + "]";
+        if(!getArrayInfo().isEmpty()) {
+            address += "[" + (getArrayInfo().get(0).getUpperBound() + 1) + "]";
         }
         return address;
     }
 
+    protected abstract String getAddressStringPrefix();
+
+    /**
+     * Instantiate a new ModbusTag
+     * @param address The WIRE address that is to be used.
+     * @param quantity The number of registers
+     * @param dataType The type for the interpretation of the registers.
+     */
+    protected OmronFinsTag(FinsRegisterAddress addrprefix, int addrword, byte addrbit, Integer quantity, OmronFinsDataType dataType) {
+        this(addrprefix, addrword, addrbit, quantity, dataType, new HashMap<>());
+    }
+
+    protected OmronFinsTag(FinsRegisterAddress addrprefix, int addrword, byte addrbit,  Integer quantity, OmronFinsDataType dataType, Map<String, String> config) {
+//        this.addrprefix = addrprefix;
+        this.addrword = addrword;
+        this.addrbit = addrbit;
+        if (getLogicalAddress() <= 0) {
+            throw new IllegalArgumentException("address must be greater than zero. Was " + getLogicalAddress());
+        }
+        this.quantity = quantity != null ? quantity : 1;
+        if (this.quantity <= 0) {
+            throw new IllegalArgumentException("quantity must be greater than zero. Was " + this.quantity);
+        }
+        this.dataType = dataType != null ? dataType : OmronFinsDataType.INT;
+        this.addrprefix = addrprefix != null ? addrprefix : FinsRegisterAddress.DM;
+    }
+
+    /**
+     * Get the technical address that must be used 'on the wire'
+     * @return The address that is to be used on the wire (shifted by 1 because of the modbus spec).
+     */
+
+    public FinsRegisterAddress getAddrprefix() {
+        return addrprefix;
+    }
+
+    public int getAddrword() {
+        return addrword;
+    }
+
+    public byte getAddrbit() {
+        return addrbit;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    /**
+     * Get the logical (configured) address
+     * @return The address which was configured and is different from what is used on the wire.
+     */
+    public abstract int getLogicalAddress();
+
+    public int getNumberOfElements() {
+        return quantity;
+    }
+
+    public int getLengthBytes() {
+        return quantity * dataType.getDataTypeSize();
+    }
+
+    public int getLengthWords() {
+        return (int) ((quantity * (float) dataType.getDataTypeSize()) / 2.0f);
+    }
+
+    public OmronFinsDataType getDataType() {
+        return dataType;
+    }
+
     @Override
     public PlcValueType getPlcValueType() {
-        return fileType.getPlcValueType();
+        return PlcValueType.valueOf(dataType.name());
     }
 
     @Override
     public List<ArrayInfo> getArrayInfo() {
-        return PlcTag.super.getArrayInfo();
-    }
-
-    public short getElementNumber() {
-        return elementNumber;
-    }
-
-    public short getBitNumber() {
-        return bitNumber;
-    }
-
-    public static boolean matches(String fieldString) {
-        return ADDRESS_PATTERN.matcher(fieldString).matches();
-    }
-
-    public static OmronFinsTag of(String fieldString) {
-        Matcher matcher = ADDRESS_PATTERN.matcher(fieldString);
-        if(matcher.matches()) {
-            short fileNumber = Short.parseShort(matcher.group(FILE_NUMBER));
-            short elementNumber = Short.parseShort(matcher.group(ELEMENT_NUMBER));
-            short bitNumber = (matcher.group(BIT_NUMBER) != null) ? Short.parseShort(matcher.group(BIT_NUMBER)) : 0;  //Short.parseShort(matcher.group(BIT_NUMBER));
-            FileType fileType = FileType.valueOf(matcher.group(DATA_TYPE).toUpperCase());
-
-            short byteSize;
-            switch (fileType) {
-                case WORD:
-                case SINGLEBIT:
-                    byteSize = 2;
-                    break;
-                case DWORD:
-                    byteSize = 4;
-                    break;
-                default:
-                    byteSize = Short.parseShort(matcher.group(SIZE));
-            }
-            return new OmronFinsTag(byteSize, fileNumber, fileType, elementNumber, bitNumber);
+        if(quantity != 1) {
+            return Collections.singletonList(new DefaultArrayInfo(0, quantity - 1));
         }
-        throw new PlcInvalidTagException("Unable to parse tag address: " + fieldString);
+        return Collections.emptyList();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof OmronFinsTag)) {
+            return false;
+        }
+        OmronFinsTag that = (OmronFinsTag) o;
+        return addrprefix == that.addrprefix &&
+            addrword == that.addrword &&
+            addrbit == that.addrbit &&
+            quantity == that.quantity &&
+            dataType == that.dataType &&
+            getClass() == that.getClass(); // MUST be identical
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.getClass(), addrprefix, addrword, addrbit, quantity, dataType);
+    }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + " {" +
+            "addrprefix=" + addrprefix +
+            "addrword=" + addrword +
+            "addrbit=" + addrbit +
+            ", quantity=" + quantity +
+            ", dataType=" + dataType +
+            " }";
+    }
+
+    @Override
+    public void serialize(WriteBuffer writeBuffer) throws SerializationException {
+        writeBuffer.pushContext(getClass().getSimpleName());
+
+        writeBuffer.writeUnsignedInt("addrword", 16, addrword);
+        writeBuffer.writeUnsignedInt("addrbit", 16, addrbit);
+        writeBuffer.writeUnsignedInt("numberOfElements", 16, getNumberOfElements());
+        String dataType = getDataType().name();
+        writeBuffer.writeString("dataType",
+            dataType.getBytes(StandardCharsets.UTF_8).length * 8,
+            dataType, WithOption.WithEncoding(StandardCharsets.UTF_8.name()));
+
+        writeBuffer.popContext(getClass().getSimpleName());
+    }
+
 
 }

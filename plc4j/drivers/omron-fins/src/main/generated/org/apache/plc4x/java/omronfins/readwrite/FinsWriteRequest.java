@@ -50,17 +50,20 @@ public class FinsWriteRequest extends FinsMessageBody implements Message {
   protected final FinsHeaderSection section;
   protected final FinsRegisterAddress registerAddress;
   protected final int startAddress;
+  protected final short bitAddress;
   protected final byte[] value;
 
   public FinsWriteRequest(
       FinsHeaderSection section,
       FinsRegisterAddress registerAddress,
       int startAddress,
+      short bitAddress,
       byte[] value) {
     super();
     this.section = section;
     this.registerAddress = registerAddress;
     this.startAddress = startAddress;
+    this.bitAddress = bitAddress;
     this.value = value;
   }
 
@@ -74,6 +77,10 @@ public class FinsWriteRequest extends FinsMessageBody implements Message {
 
   public int getStartAddress() {
     return startAddress;
+  }
+
+  public short getBitAddress() {
+    return bitAddress;
   }
 
   public byte[] getValue() {
@@ -98,10 +105,13 @@ public class FinsWriteRequest extends FinsMessageBody implements Message {
         writeEnum(
             FinsRegisterAddress::getValue,
             FinsRegisterAddress::name,
-            writeUnsignedLong(writeBuffer, 32)));
+            writeUnsignedShort(writeBuffer, 8)));
 
     // Simple Field (startAddress)
-    writeSimpleField("startAddress", startAddress, writeUnsignedInt(writeBuffer, 24));
+    writeSimpleField("startAddress", startAddress, writeUnsignedInt(writeBuffer, 16));
+
+    // Simple Field (bitAddress)
+    writeSimpleField("bitAddress", bitAddress, writeUnsignedShort(writeBuffer, 8));
 
     // Implicit Field (byteCount) (Used for parsing, but its value is not stored as it's implicitly
     // given by the objects content)
@@ -129,10 +139,13 @@ public class FinsWriteRequest extends FinsMessageBody implements Message {
     lengthInBits += section.getLengthInBits();
 
     // Simple field (registerAddress)
-    lengthInBits += 32;
+    lengthInBits += 8;
 
     // Simple field (startAddress)
-    lengthInBits += 24;
+    lengthInBits += 16;
+
+    // Simple field (bitAddress)
+    lengthInBits += 8;
 
     // Implicit Field (byteCount)
     lengthInBits += 8;
@@ -159,9 +172,11 @@ public class FinsWriteRequest extends FinsMessageBody implements Message {
         readEnumField(
             "registerAddress",
             "FinsRegisterAddress",
-            readEnum(FinsRegisterAddress::enumForValue, readUnsignedLong(readBuffer, 32)));
+            readEnum(FinsRegisterAddress::enumForValue, readUnsignedShort(readBuffer, 8)));
 
-    int startAddress = readSimpleField("startAddress", readUnsignedInt(readBuffer, 24));
+    int startAddress = readSimpleField("startAddress", readUnsignedInt(readBuffer, 16));
+
+    short bitAddress = readSimpleField("bitAddress", readUnsignedShort(readBuffer, 8));
 
     short byteCount = readImplicitField("byteCount", readUnsignedShort(readBuffer, 8));
 
@@ -169,7 +184,8 @@ public class FinsWriteRequest extends FinsMessageBody implements Message {
 
     readBuffer.closeContext("FinsWriteRequest");
     // Create the instance
-    return new FinsWriteRequestBuilderImpl(section, registerAddress, startAddress, value);
+    return new FinsWriteRequestBuilderImpl(
+        section, registerAddress, startAddress, bitAddress, value);
   }
 
   public static class FinsWriteRequestBuilderImpl
@@ -177,22 +193,25 @@ public class FinsWriteRequest extends FinsMessageBody implements Message {
     private final FinsHeaderSection section;
     private final FinsRegisterAddress registerAddress;
     private final int startAddress;
+    private final short bitAddress;
     private final byte[] value;
 
     public FinsWriteRequestBuilderImpl(
         FinsHeaderSection section,
         FinsRegisterAddress registerAddress,
         int startAddress,
+        short bitAddress,
         byte[] value) {
       this.section = section;
       this.registerAddress = registerAddress;
       this.startAddress = startAddress;
+      this.bitAddress = bitAddress;
       this.value = value;
     }
 
     public FinsWriteRequest build() {
       FinsWriteRequest finsWriteRequest =
-          new FinsWriteRequest(section, registerAddress, startAddress, value);
+          new FinsWriteRequest(section, registerAddress, startAddress, bitAddress, value);
       return finsWriteRequest;
     }
   }
@@ -209,6 +228,7 @@ public class FinsWriteRequest extends FinsMessageBody implements Message {
     return (getSection() == that.getSection())
         && (getRegisterAddress() == that.getRegisterAddress())
         && (getStartAddress() == that.getStartAddress())
+        && (getBitAddress() == that.getBitAddress())
         && (getValue() == that.getValue())
         && super.equals(that)
         && true;
@@ -217,7 +237,12 @@ public class FinsWriteRequest extends FinsMessageBody implements Message {
   @Override
   public int hashCode() {
     return Objects.hash(
-        super.hashCode(), getSection(), getRegisterAddress(), getStartAddress(), getValue());
+        super.hashCode(),
+        getSection(),
+        getRegisterAddress(),
+        getStartAddress(),
+        getBitAddress(),
+        getValue());
   }
 
   @Override

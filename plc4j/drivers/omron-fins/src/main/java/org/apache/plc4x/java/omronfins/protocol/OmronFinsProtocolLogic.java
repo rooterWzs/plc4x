@@ -18,32 +18,31 @@
  */
 package org.apache.plc4x.java.omronfins.protocol;
 
-import io.netty.channel.ChannelHandlerContext;
 import org.apache.plc4x.java.api.messages.PlcReadRequest;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
 import org.apache.plc4x.java.api.model.PlcTag;
 import org.apache.plc4x.java.api.types.PlcResponseCode;
+import org.apache.plc4x.java.api.value.PlcValue;
 import org.apache.plc4x.java.omronfins.configuration.OmronFinsConfiguration;
 import org.apache.plc4x.java.omronfins.context.OmronFinsDriverContext;
-import org.apache.plc4x.java.omronfins.readwrite.FinsHandshakeRequest;
-import org.apache.plc4x.java.omronfins.readwrite.FinsHandshakeResponse;
-import org.apache.plc4x.java.omronfins.readwrite.FinsMessage;
+import org.apache.plc4x.java.omronfins.readwrite.*;
 import org.apache.plc4x.java.omronfins.tag.OmronFinsTag;
 import org.apache.plc4x.java.omronfins.tag.OmronFinsTagHandler;
 import org.apache.plc4x.java.omronfins.utils.MakeDataUtil;
 import org.apache.plc4x.java.spi.ConversationContext;
 import org.apache.plc4x.java.spi.Plc4xProtocolBase;
-import org.apache.plc4x.java.spi.configuration.HasConfiguration;
 import org.apache.plc4x.java.spi.connection.PlcTagHandler;
 import org.apache.plc4x.java.spi.context.DriverContext;
-import org.apache.plc4x.java.spi.events.ConnectEvent;
+import org.apache.plc4x.java.spi.messages.DefaultPlcReadRequest;
+import org.apache.plc4x.java.spi.messages.DefaultPlcReadResponse;
+import org.apache.plc4x.java.spi.messages.utils.DefaultPlcResponseItem;
 import org.apache.plc4x.java.spi.transaction.RequestTransactionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.crypto.spec.PSource;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -82,27 +81,25 @@ public class OmronFinsProtocolLogic extends Plc4xProtocolBase<FinsMessage> {
         tm.shutdown();
     }
 
-    @Override
-    public void onDisconnect(ConversationContext<FinsMessage> context) {
-        // Intentionally do nothing here
-        System.out.println("Connection onDisconnect:");
-    }
+//    @Override
+//    public void onDisconnect(ConversationContext<FinsMessage> context) {
+//        // Intentionally do nothing here
+//        System.out.println("Connection onDisconnect:");
+//    }
 
-    @Override
-    public void onDiscover(ConversationContext<FinsMessage> context) {
-        // Intentionally do nothing here
-        System.out.println("Connection onDiscover:");
-    }
+//    @Override
+//    public void onDiscover(ConversationContext<FinsMessage> context) {
+//        // Intentionally do nothing here
+//        System.out.println("Connection onDiscover:");
+//    }
 
 //    46494e53  00 00 00 10
 //    00000000  00 00 00 00
 //    00000004  00 00 00 00
     @Override
     public void onConnect(ConversationContext<FinsMessage> context) {
-
-        logger.debug("Sending Connection Request");
         FinsMessage connectionRequest = new FinsMessage(0x00000000, createFinsHandshakeRequest());
-
+        logger.debug("Sending Connection Request：" + connectionRequest.toString());
         context.sendRequest(connectionRequest)
             .onTimeout(e -> {
                 logger.warn("Timeout during Connection establishing, closing channel...");
@@ -130,6 +127,9 @@ public class OmronFinsProtocolLogic extends Plc4xProtocolBase<FinsMessage> {
 
     @Override
     public CompletableFuture<PlcReadResponse> read(PlcReadRequest readRequest) {
+        CompletableFuture<PlcReadResponse> future = new CompletableFuture<>();
+        DefaultPlcReadRequest request = (DefaultPlcReadRequest) readRequest;
+
         System.out.println("Connection read: SA1:" + driverContext.getSa1() + " | DA1:" + driverContext.getDa1());
 
         // TODO: Warning ... we are sending one request per tag ...
@@ -140,6 +140,60 @@ public class OmronFinsProtocolLogic extends Plc4xProtocolBase<FinsMessage> {
                 logger.error("The tag should have been of type OmronFinsTag");
             }
             OmronFinsTag omronFinsTag = (OmronFinsTag) tag;
+            FinsHeaderSection section = new FinsHeaderSection((short) 0x80, (short)0x00, driverContext.getDa1(), (short)0x00,
+                (short)0x00, driverContext.getSa1(), (short)0x00);
+
+
+            FinsReadRequest finsReadRequest = new FinsReadRequest(section,FinsSrcMrcCode.FinsReadRequest,omronFinsTag.getAddrprefix(), omronFinsTag.getAddrword(),omronFinsTag.getAddrbit(), omronFinsTag.getQuantity());
+            FinsMessage finsMessage = new FinsMessage(FinsCommandCode.FinsReadRequest.getValue(), finsReadRequest);
+
+            RequestTransactionManager.RequestTransaction transaction = tm.startRequest();
+            transaction.submit(() -> conversationContext.sendRequest(finsMessage)
+                .expectResponse(FinsMessage.class, REQUEST_TIMEOUT)
+                .onTimeout(future::completeExceptionally)
+//                .onError((p, e) -> future.completeExceptionally(e))
+//                .check(p -> (
+//                    p.getErrorCode() == FinsErrorCode.NoError.getValue()
+//                ))
+                .unwrap(FinsMessage::getMessageBody)
+//                .only(FinsReadResponse.class)
+                .handle(finsReadResponse -> {
+                    System.out.println("finsReadResponse:"+ finsReadResponse.toString());
+//                    if(finsReadResponse.getResErrorCode() == 0){
+//
+//                    }
+                    System.out.println("true");
+                    // Try to decode the response data based on the corresponding request.
+                    PlcValue plcValue = null;
+                    PlcResponseCode responseCode;
+                    // Check if the response was an error response.
+//                    if (responsePdu instanceof ModbusPDUError) {
+//                        ModbusPDUError errorResponse = (ModbusPDUError) responsePdu;
+//                        responseCode = getErrorCode(errorResponse);
+//                    } else {
+//                        try {
+//                            ModbusByteOrder byteOrder = defaultPayloadByteOrder;
+//                            if(tag.getByteOrder() != null) {
+//                                byteOrder = tag.getByteOrder();
+//                            }
+//                            plcValue = toPlcValue(requestPdu, responsePdu, tag.getDataType(), byteOrder);
+//                            responseCode = PlcResponseCode.OK;
+//                        } catch (ParseException e) {
+//                            // Add an error response code ...
+//                            responseCode = PlcResponseCode.INTERNAL_ERROR;
+//                        }
+//                    }
+
+                    // Prepare the response.
+//                    PlcReadResponse response = new DefaultPlcReadResponse(request,
+//                        Collections.singletonMap(tagName, new DefaultPlcResponseItem<>(responseCode, plcValue)));
+
+                    // Pass the response back to the application.
+//                    future.complete(response);
+
+                    // Finish the request-transaction.
+                    transaction.endRequest();
+                }));
 
         }
         // TODO: Should return an aggregated future ....
@@ -148,8 +202,8 @@ public class OmronFinsProtocolLogic extends Plc4xProtocolBase<FinsMessage> {
 
     @Override
     protected void decode(ConversationContext<FinsMessage> context, FinsMessage msg) throws Exception {
-        System.out.println("Connection decode:");
-
+        System.out.println("receive byte:" + msg);
+        super.decode(context, msg);
     }
 
 

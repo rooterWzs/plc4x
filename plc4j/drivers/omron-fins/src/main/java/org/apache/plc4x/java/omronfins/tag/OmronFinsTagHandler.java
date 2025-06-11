@@ -27,7 +27,7 @@ public class OmronFinsTagHandler implements PlcTagHandler {
 
     @Override
     public PlcTag parseTag(String tagAddress) throws PlcInvalidTagException {
-        if (OmronFinsTag.matches(tagAddress)) {
+        if (OmronFinsTagMatch.matches(tagAddress)) {
             return OmronFinsTag.of(tagAddress);
         }
         throw new PlcInvalidTagException(tagAddress);

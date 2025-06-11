@@ -93,7 +93,7 @@ public class FinsReadResponse extends FinsMessageBody implements Message {
         "FinsSrcMrcCode",
         srcMrcCode,
         writeEnum(
-            FinsSrcMrcCode::getValue, FinsSrcMrcCode::name, writeUnsignedLong(writeBuffer, 32)));
+            FinsSrcMrcCode::getValue, FinsSrcMrcCode::name, writeUnsignedInt(writeBuffer, 16)));
 
     // Simple Field (resErrorCode)
     writeSimpleField("resErrorCode", resErrorCode, writeUnsignedInt(writeBuffer, 16));
@@ -124,7 +124,7 @@ public class FinsReadResponse extends FinsMessageBody implements Message {
     lengthInBits += section.getLengthInBits();
 
     // Simple field (srcMrcCode)
-    lengthInBits += 32;
+    lengthInBits += 16;
 
     // Simple field (resErrorCode)
     lengthInBits += 16;
@@ -154,7 +154,7 @@ public class FinsReadResponse extends FinsMessageBody implements Message {
         readEnumField(
             "srcMrcCode",
             "FinsSrcMrcCode",
-            readEnum(FinsSrcMrcCode::enumForValue, readUnsignedLong(readBuffer, 32)));
+            readEnum(FinsSrcMrcCode::enumForValue, readUnsignedInt(readBuffer, 16)));
 
     int resErrorCode = readSimpleField("resErrorCode", readUnsignedInt(readBuffer, 16));
 

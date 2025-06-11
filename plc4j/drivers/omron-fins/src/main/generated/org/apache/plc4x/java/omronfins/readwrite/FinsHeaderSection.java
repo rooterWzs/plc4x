@@ -50,19 +50,9 @@ public class FinsHeaderSection implements Message {
   protected final short SNA;
   protected final short SA1;
   protected final short SA2;
-  protected final short MRC;
-  protected final short SRC;
 
   public FinsHeaderSection(
-      short ICF,
-      short DNA,
-      short DA1,
-      short DA2,
-      short SNA,
-      short SA1,
-      short SA2,
-      short MRC,
-      short SRC) {
+      short ICF, short DNA, short DA1, short DA2, short SNA, short SA1, short SA2) {
     super();
     this.ICF = ICF;
     this.DNA = DNA;
@@ -71,8 +61,6 @@ public class FinsHeaderSection implements Message {
     this.SNA = SNA;
     this.SA1 = SA1;
     this.SA2 = SA2;
-    this.MRC = MRC;
-    this.SRC = SRC;
   }
 
   public short getICF() {
@@ -101,14 +89,6 @@ public class FinsHeaderSection implements Message {
 
   public short getSA2() {
     return SA2;
-  }
-
-  public short getMRC() {
-    return MRC;
-  }
-
-  public short getSRC() {
-    return SRC;
   }
 
   public short getRSV() {
@@ -158,12 +138,6 @@ public class FinsHeaderSection implements Message {
     // Const Field (SID)
     writeConstField("SID", SID, writeSignedByte(writeBuffer, 8));
 
-    // Simple Field (MRC)
-    writeSimpleField("MRC", MRC, writeUnsignedShort(writeBuffer, 8));
-
-    // Simple Field (SRC)
-    writeSimpleField("SRC", SRC, writeUnsignedShort(writeBuffer, 8));
-
     writeBuffer.popContext("FinsHeaderSection");
   }
 
@@ -208,12 +182,6 @@ public class FinsHeaderSection implements Message {
     // Const Field (SID)
     lengthInBits += 8;
 
-    // Simple field (MRC)
-    lengthInBits += 8;
-
-    // Simple field (SRC)
-    lengthInBits += 8;
-
     return lengthInBits;
   }
 
@@ -242,14 +210,10 @@ public class FinsHeaderSection implements Message {
 
     byte SID = readConstField("SID", readSignedByte(readBuffer, 8), FinsHeaderSection.SID);
 
-    short MRC = readSimpleField("MRC", readUnsignedShort(readBuffer, 8));
-
-    short SRC = readSimpleField("SRC", readUnsignedShort(readBuffer, 8));
-
     readBuffer.closeContext("FinsHeaderSection");
     // Create the instance
     FinsHeaderSection _finsHeaderSection;
-    _finsHeaderSection = new FinsHeaderSection(ICF, DNA, DA1, DA2, SNA, SA1, SA2, MRC, SRC);
+    _finsHeaderSection = new FinsHeaderSection(ICF, DNA, DA1, DA2, SNA, SA1, SA2);
     return _finsHeaderSection;
   }
 
@@ -269,15 +233,12 @@ public class FinsHeaderSection implements Message {
         && (getSNA() == that.getSNA())
         && (getSA1() == that.getSA1())
         && (getSA2() == that.getSA2())
-        && (getMRC() == that.getMRC())
-        && (getSRC() == that.getSRC())
         && true;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(
-        getICF(), getDNA(), getDA1(), getDA2(), getSNA(), getSA1(), getSA2(), getMRC(), getSRC());
+    return Objects.hash(getICF(), getDNA(), getDA1(), getDA2(), getSNA(), getSA1(), getSA2());
   }
 
   @Override
