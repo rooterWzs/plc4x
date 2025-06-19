@@ -277,7 +277,7 @@ public class S7Configuration implements PlcConnectionConfiguration {
     public void setRetryTime(int retryTime) {
         this.retryTime = retryTime;
     }
-    
+
     @Override
     public String toString() {
         return "Configuration{" +
