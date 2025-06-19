@@ -20,22 +20,22 @@ public class Main {
 
     public static void main(String[] args) {
         try{
-            PlcConnection connection = new DefaultPlcDriverManager().getConnection("omron-fins:tcp://127.0.0.1:9600");
+            PlcConnection connection = new DefaultPlcDriverManager().getConnection("omron-fins:tcp://14.152.128.3:9600");
             if (!connection.isConnected()){
                 System.out.println("disconnected");
             }
             System.out.println("connected");
 
             final PlcReadRequest.Builder readrequest = connection.readRequestBuilder(); //(2.2)
-            readrequest.addTagAddress("DM100", "DM100:INT[2]"); //(3.1)
+            readrequest.addTagAddress("DM505", "DM505:INT[2]"); //(3.1)
 //            readrequest.addTagAddress("DM400", "DM400:INT"); //(3.1)
 //            readrequest.addTagAddress("DM800", "DM800:INT"); //(3.1)
 //            readrequest.addTagAddress("HR110", "DM110:INT"); //(3.1)
 
             final PlcReadRequest rr = readrequest.build(); //(3.2)
             final PlcReadResponse response = rr.execute().get(); //(3.3)
-            if (response.getResponseCode("DM100") == PlcResponseCode.OK) {//(3.4)
-                System.out.println("response: " + response.getObject("DM100"));
+            if (response.getResponseCode("DM505") == PlcResponseCode.OK) {//(3.4)
+                System.out.println("response: " + response.getObject("DM505"));
             }
         }catch (Exception ex){
             ex.printStackTrace();
